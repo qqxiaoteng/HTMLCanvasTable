@@ -6,8 +6,7 @@ This is a simple table editor implemented using HTML5 Canvas. Users can edit tab
 
 ## Author
 
-https://gitee.com/lightcomputer
-
+https://github.com/qqxiaoteng
 
 ## Language
 
