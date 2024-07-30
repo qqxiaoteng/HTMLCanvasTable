@@ -6,7 +6,7 @@
 
 ## အတည်ဆောက်သူ
 
-https://gitee.com/lightcomputer
+https://github.com/qqxiaoteng
 
 ## Language
 
