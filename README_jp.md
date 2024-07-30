@@ -6,7 +6,7 @@
 
 ## 作者
 
-https://gitee.com/lightcomputer
+https://github.com/qqxiaoteng
 
 ## Language
 
