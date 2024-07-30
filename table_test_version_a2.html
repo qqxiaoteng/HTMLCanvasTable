@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Canvas 表格示例</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+        #menu {
+            display: none;
+            position: absolute;
+            background-color: white;
+            border: 1px solid black;
+            padding: 5px;
+        }
+        #menu li {
+            list-style: none;
+            cursor: pointer;
+        }
+        #menu li:hover {
+            background-color: lightgray;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="myCanvas" width="800" height="600"></canvas>
+    <div id="menu">
+        <ul>
+            <li id="addRow">增加行</li>
+            <li id="removeRow">删除行</li>
+        </ul>
+    </div>
+    <script>
+        const canvas = document.getElementById('myCanvas');
+        const ctx = canvas.getContext('2d');
+        let tableData = [];
+        let headers = ['姓名', '年龄', '性别'];
+        let cellWidth = 200;
+        let cellHeight = 50;
+        let headerHeight = 50;
+        let isEditing = false;
+        let editCell = null;
+        let menu = document.getElementById('menu');
+
+        function initTableData() {
+            tableData = [];
+            headers.forEach((header, col) => {
+                tableData.push({
+                    type: 'header',
+                    value: header,
+                    row: 0,
+                    col: col,
+                    x: col * cellWidth,
+                    y: 0,
+                    width: cellWidth,
+                    height: headerHeight
+                });
+            });
+            for (let row = 1; row <= 5; row++) {
+                for (let col = 0; col < headers.length; col++) {
+                    tableData.push({
+                        type: 'cell',
+                        value: `Row ${row} Col ${col}`,
+                        row: row,
+                        col: col,
+                        x: col * cellWidth,
+                        y: row * cellHeight + headerHeight,
+                        width: cellWidth,
+                        height: cellHeight
+                    });
+                }
+            }
+        }
+
+        function drawTable() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            tableData.forEach(item => {
+                ctx.fillStyle = item.type === 'header' ? 'lightgray' : 'white';
+                ctx.fillRect(item.x, item.y, item.width, item.height);
+                ctx.strokeRect(item.x, item.y, item.width, item.height);
+                ctx.fillStyle = 'black';
+                ctx.font = '16px Arial';
+                ctx.fillText(item.value, item.x + 10, item.y + 30);
+            });
+            if (isEditing && editCell) {
+                ctx.fillStyle = 'black';
+                ctx.font = '16px Arial';
+                ctx.fillText(editCell.value + '|', editCell.x + 10, editCell.y + 30);
+            }
+        }
+
+        function handleClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            tableData.forEach(item => {
+                if (x >= item.x && x <= item.x + item.width && y >= item.y && y <= item.y + item.height) {
+                    if (item.type === 'header') {
+                        showHeaderMenu(item, event.clientX, event.clientY);
+                    } else if (item.type === 'cell') {
+                        startEditing(item);
+                    }
+                }
+            });
+        }
+
+        function showHeaderMenu(header, x, y) {
+            const menuItems = headers.filter(h => h !== header.value).map(h => `<li>${h}</li>`).join('');
+            menu.innerHTML = menuItems;
+            menu.style.display = 'block';
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+            menu.querySelectorAll('li').forEach(li => {
+                li.addEventListener('click', () => {
+                    swapHeaders(header.value, li.innerText);
+                    menu.style.display = 'none';
+                });
+            });
+        }
+
+        function swapHeaders(header1, header2) {
+            const col1 = headers.indexOf(header1);
+            const col2 = headers.indexOf(header2);
+            headers[col1] = header2;
+            headers[col2] = header1;
+            tableData.forEach(item => {
+                if (item.col === col1) {
+                    item.col = col2;
+                    item.x = col2 * cellWidth;
+                } else if (item.col === col2) {
+                    item.col = col1;
+                    item.x = col1 * cellWidth;
+                }
+            });
+            drawTable();
+        }
+
+        function startEditing(cell) {
+            isEditing = true;
+            editCell = cell;
+            drawTable();
+        }
+
+        function handleKeyDown(event) {
+            if (isEditing && editCell) {
+                if (event.key === 'Enter') {
+                    isEditing = false;
+                    editCell = null;
+                    drawTable();
+                } else if (event.key === 'Backspace') {
+                    editCell.value = editCell.value.slice(0, -1);
+                } else if (event.key.length === 1) {
+                    editCell.value += event.key;
+                }
+                drawTable();
+            }
+        }
+
+        function handleContextMenu(event) {
+            event.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            tableData.forEach(item => {
+                if (item.type === 'cell' && x >= item.x && x <= item.x + item.width && y >= item.y && y <= item.y + item.height) {
+                    showRowMenu(item.row, event.clientX, event.clientY);
+                }
+            });
+        }
+
+        function showRowMenu(row, x, y) {
+            menu.innerHTML = `<ul><li id="addRow">增加行</li><li id="removeRow">删除行</li></ul>`;
+            menu.style.display = 'block';
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+            document.getElementById('addRow').addEventListener('click', () => {
+                addRow(row);
+                menu.style.display = 'none';
+            });
+            document.getElementById('removeRow').addEventListener('click', () => {
+                removeRow(row);
+                menu.style.display = 'none';
+            });
+        }
+
+        function addRow(row) {
+            for (let col = 0; col < headers.length; col++) {
+                tableData.push({
+                    type: 'cell',
+                    value: `Row ${row + 1} Col ${col}`,
+                    row: row + 1,
+                    col: col,
+                    x: col * cellWidth,
+                    y: (row + 1) * cellHeight + headerHeight,
+                    width: cellWidth,
+                    height: cellHeight
+                });
+            }
+            drawTable();
+        }
+
+        function removeRow(row) {
+            tableData = tableData.filter(item => item.row !== row);
+            drawTable();
+        }
+
+        canvas.addEventListener('click', handleClick);
+        canvas.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('keydown', handleKeyDown);
+
+        initTableData();
+        drawTable();
+    </script>
+</body>
+</html>

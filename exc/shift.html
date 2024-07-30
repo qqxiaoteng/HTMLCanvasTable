@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+
+  <title>Title</title>
+
+
+  <style>
+    body {
+      width: 100%;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      border: none;
+      overflow: hidden;
+      background-color: white;
+
+      color: aliceblue;
+    }
+
+    #app {
+      color: #000;
+      top: 20px;
+      left: 20px;
+      border: 1px #aeaeae solid;
+      position: absolute;
+      background-color: #ffffff;
+      width: 310px;
+
+    }
+
+
+
+    ::-webkit-scrollbar {
+      height: 5px;
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      border-radius: 10px;
+      background-color: rgba(157, 165, 183, 0.4);
+    }
+
+    .virtual-top {
+      left: 180px;
+    }
+
+    #showHtml {
+      position: absolute;
+      top: 0px;
+      left: 100px;
+      padding: 1px;
+      height: 20px;
+    }
+
+    p {
+      display: inline-block;
+      padding: 0;
+      margin: 0;
+    }
+
+    .container {
+      padding: 10px;
+      height: 100%;
+
+    }
+
+    #tableHeader {
+      position: absolute;
+      left: 60px;
+      width: 910px;
+
+      height: 40px;
+      border: 1px solid #000;
+
+      overflow: auto;
+      max-height: 650px;
+
+    }
+
+
+    #codeContainer {
+      position: absolute;
+      left: 60px;
+      width: 910px;
+      top: 50;
+      height: 630px;
+      border: 1px solid #000;
+
+      overflow: auto;
+      max-height: 650px;
+
+    }
+
+    .context-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      z-index: 1000;
+    }
+
+    canvas {
+  overflow: auto;
+}
+  </style>
+</head>
+<div id="tableHeader" style="position: relative;">
+  <canvas id="canvas" style="position: absolute;z-index: 10;"></canvas>
+</div>
+
+
+<div id="codeContainer" style="position: relative;">
+  <canvas id="canvas2" style="position: absolute;z-index: 10;"></canvas>
+</div>
+
+
+<!-- 调试代码 -->
+<style>
+
+</style>
+<script>
+  let whole = true
+  let targetY = 0
+  let duringPie = false
+  let minRange, maxRange
+  let currentIndex = 0
+  let drift = 0
+  let originData = 0
+  const driftArr = []
+  const par = 22
+
+  let lineStr = 0
+  function debounce(func, wait) {
+    let timeout;
+
+    return function () {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, arguments), wait);
+    }
+  }
+
+
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    console.log(123)
+    canvas = document.getElementById('canvas2');
+    ctx = canvas.getContext('2d');
+
+    const table = {
+      rows: 1,
+      columns: 3,
+      data: [['', '', '']],
+      headers: ['Header 1', 'Header 2', 'Header 3']
+    };
+
+    function drawTable() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.font = 'bold 14px Arial';
+      table.headers.forEach((header, colIndex) => {
+        ctx.fillText(header, 10 + colIndex * 100, 30);
+      });
+
+      ctx.font = '12px Arial';
+      table.data.forEach((row, rowIndex) => {
+        row.forEach((cell, colIndex) => {
+          ctx.fillText(cell, 10 + colIndex * 100, 50 + (rowIndex + 1) * 30);
+        });
+      });
+    }
+
+    canvas.addEventListener('click', function (event) {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      const col = Math.floor(x / 100);
+      const row = Math.floor((y - 50) / 30);
+
+      if (col >= 0 && col < table.columns && row >= 0 && row < table.rows) {
+        const cell = table.data[row][col];
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = cell;
+        input.style.position = 'absolute';
+        input.style.left = `${x}px`;
+        input.style.top = `${y}px`;
+        input.style.zIndex = 100;
+        input.style.width = '50px';
+        input.style.height = '20px';
+
+        document.body.appendChild(input);
+
+        input.addEventListener('blur', function () {
+          table.data[row][col] = input.value;
+          drawTable();
+
+          document.body.removeChild(input);
+        });
+
+        input.focus();
+      }
+    });
+
+    canvas.addEventListener('contextmenu', function (event) {
+      event.preventDefault();
+
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      const col = Math.floor(x / 100);
+      const row = Math.floor((y - 50) / 30);
+
+      if (col >= 0 && col < table.columns && row >= 0 && row < table.rows) {
+        const menu = document.createElement('div');
+        menu.className = 'context-menu';
+        menu.style.position = 'absolute';
+        menu.style.left = `${event.clientX}px`;
+        menu.style.top = `${event.clientY}px`;
+        menu.style.backgroundColor = '#fff';
+        menu.style.border = '1px solid #ccc';
+        menu.style.padding = '5px';
+
+        const addRowButton = document.createElement('button');
+        addRowButton.textContent = 'Add Row';
+        addRowButton.addEventListener('click', function () {
+          table.data.splice(row + 1, 0, ['', '', '']);
+          drawTable();
+        });
+        menu.appendChild(addRowButton);
+
+        const removeRowButton = document.createElement('button');
+        removeRowButton.textContent = 'Remove Row';
+        removeRowButton.addEventListener('click', function () {
+          if (table.data.length > 1) {
+            table.data.splice(row, 1);
+            drawTable();
+          }
+        });
+        menu.appendChild(removeRowButton);
+
+        document.body.appendChild(menu);
+
+        menu.addEventListener('click', function (event) {
+          document.body.removeChild(menu);
+        });
+      }
+    });
+
+    drawTable();
+  });
+</script>
+
+
+
+<!-- start -->
+<script src="./js/constant.js"></script>
+<script src="./js/class/CanvasHelper.js"></script>
+<script src="./js/class/Base.js"></script>
+<script src="./js/class/Spite.js"></script>
+<script src="./js/class/Table.js?1231"></script>
+
+<script type="text/javascript" src="shift.js"></script>
+<!-- end -->
+
+</body>
+
+</html>
